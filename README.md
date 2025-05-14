@@ -29,7 +29,7 @@ A professional rule-based chatbot built with Python, featuring natural language 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/ChatBot.git
+git clone https://github.com/dishapawarkhausi/ChatBot.git
 cd ChatBot
 ```
 
