@@ -1,0 +1,15 @@
+nltk
+streamlit
+pandas
+textblob
+scikit-learn
+numpy
+plotly
+emoji
+SpeechRecognition
+pyttsx3
+pyjokes
+requests
+beautifulsoup4
+python-dotenv
+openai
