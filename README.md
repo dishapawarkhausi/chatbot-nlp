@@ -89,3 +89,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - NLTK for natural language processing capabilities
 - Streamlit for the web interface
 - All other open-source libraries used in this project 
+
+## 🚀 Live Demo
+Check out the live Streamlit app here:  
+👉 [Spam Classifier App]()
