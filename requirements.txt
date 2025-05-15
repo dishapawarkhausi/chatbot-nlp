@@ -1,12 +1,7 @@
-streamlit
+flask
 nltk
 textblob
-plotly
-pandas
-emoji
-SpeechRecognition
-pyttsx3
-pyjokes
-beautifulsoup4
+gtts
+requests
+gunicorn
 python-dotenv
-openai
