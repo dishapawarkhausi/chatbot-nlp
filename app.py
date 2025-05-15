@@ -11,10 +11,7 @@ from datetime import datetime
 import speech_recognition as sr
 import pyttsx3
 import pyjokes
-<<<<<<< HEAD
-=======
 import requests
->>>>>>> 08811a826a2f5c8aec09e9c90d77c89aa6aff472
 from bs4 import BeautifulSoup
 import os
 from dotenv import load_dotenv
