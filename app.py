@@ -7,28 +7,30 @@ import re
 import string
 import plotly.express as px
 import pandas as pd
-import emoji
 from datetime import datetime
 import speech_recognition as sr
 import pyttsx3
 import pyjokes
-import requests
-import json
 from bs4 import BeautifulSoup
 import os
 from dotenv import load_dotenv
-import time
-import threading
-import openai
 from typing import Dict, List, Optional
 import logging
 import webbrowser
 import sys
 import tempfile
 
-# Configure logging
+# Initialize logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Log installed packages
+try:
+    import pkg_resources
+    installed = sorted(["%s==%s" % (i.key, i.version) for i in pkg_resources.working_set])
+    logger.info("Installed packages:\n" + "\n".join(installed))
+except Exception as e:
+    logger.warning(f"Could not list installed packages: {e}")
 
 # Load environment variables
 load_dotenv()

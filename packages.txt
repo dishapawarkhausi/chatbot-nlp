@@ -1,0 +1,19 @@
+# Essential build tools
+build-essential
+python3-dev
+
+# For pyttsx3 (text-to-speech)
+espeak
+libespeak-dev
+ffmpeg
+
+# For SpeechRecognition (microphone/audio input)
+portaudio19-dev
+python3-pyaudio
+
+# For BeautifulSoup (HTML parsing dependencies)
+libxml2-dev
+libxslt1-dev
+
+# For numpy, pandas, scikit-learn (compilation support)
+gfortran
