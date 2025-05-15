@@ -25,14 +25,6 @@ import tempfile
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Log installed packages
-try:
-    import pkg_resources
-    installed = sorted(["%s==%s" % (i.key, i.version) for i in pkg_resources.working_set])
-    logger.info("Installed packages:\n" + "\n".join(installed))
-except Exception as e:
-    logger.warning(f"Could not list installed packages: {e}")
-
 # Load environment variables
 load_dotenv()
 
