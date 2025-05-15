@@ -29,7 +29,7 @@ A professional rule-based chatbot built with Python, featuring natural language 
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/ChatBot.git
+git clone https://github.com/dishapawarkhausi/ChatBot.git
 cd ChatBot
 ```
 
@@ -89,3 +89,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - NLTK for natural language processing capabilities
 - Streamlit for the web interface
 - All other open-source libraries used in this project 
+
+## 🚀 Live Demo
+Check out the live Streamlit app here:  
+👉 [ChatBot]()
