@@ -7,19 +7,14 @@ import re
 import string
 import plotly.express as px
 import pandas as pd
-import emoji
 from datetime import datetime
 import speech_recognition as sr
 import pyttsx3
 import pyjokes
 import requests
-import json
 from bs4 import BeautifulSoup
 import os
 from dotenv import load_dotenv
-import time
-import threading
-import openai
 from typing import Dict, List, Optional
 import logging
 import webbrowser
