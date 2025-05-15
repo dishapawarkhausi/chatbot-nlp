@@ -23,6 +23,8 @@ import openai
 from typing import Dict, List, Optional
 import logging
 import webbrowser
+import sys
+import tempfile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -31,19 +33,95 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Download required NLTK data
-try:
-    nltk.data.find('tokenizers/punkt')
-except LookupError:
-    nltk.download('punkt')
-try:
-    nltk.data.find('corpora/stopwords')
-except LookupError:
-    nltk.download('stopwords')
-try:
-    nltk.data.find('corpora/wordnet')
-except LookupError:
-    nltk.download('wordnet')
+def ensure_nltk_data():
+    """Ensure NLTK data is available in the correct location for production."""
+    try:
+        # Create a temporary directory for NLTK data if it doesn't exist
+        nltk_data_dir = os.path.join(tempfile.gettempdir(), 'nltk_data')
+        os.makedirs(nltk_data_dir, exist_ok=True)
+        
+        # Set NLTK data path
+        nltk.data.path.append(nltk_data_dir)
+        
+        # Required NLTK packages with their correct paths
+        required_packages = {
+            'punkt': 'tokenizers/punkt',
+            'stopwords': 'corpora/stopwords',
+            'wordnet': 'corpora/wordnet',
+            'averaged_perceptron_tagger': 'taggers/averaged_perceptron_tagger'
+        }
+        
+        def verify_wordnet():
+            """Verify WordNet is properly initialized."""
+            try:
+                from nltk.corpus import wordnet
+                # Try to access a known synset to verify WordNet is working
+                test_synset = wordnet.synsets('test')[0]
+                return True
+            except Exception as e:
+                logger.error(f"WordNet verification failed: {str(e)}")
+                return False
+        
+        # Download each package if not present
+        for package, path in required_packages.items():
+            try:
+                # Special handling for wordnet
+                if package == 'wordnet':
+                    if verify_wordnet():
+                        logger.info("WordNet is already downloaded and initialized")
+                        continue
+                
+                # Check if package is already downloaded
+                nltk.data.find(path)
+                logger.info(f"Package {package} already downloaded")
+            except LookupError:
+                try:
+                    # Download package to the temporary directory
+                    nltk.download(package, download_dir=nltk_data_dir, quiet=True)
+                    logger.info(f"Successfully downloaded NLTK package: {package}")
+                    
+                    # Special handling for wordnet after download
+                    if package == 'wordnet':
+                        if not verify_wordnet():
+                            raise Exception("WordNet downloaded but not properly initialized")
+                            
+                except Exception as e:
+                    logger.error(f"Error downloading NLTK package {package}: {str(e)}")
+                    st.error(f"Error downloading required NLTK data: {package}. Please try again.")
+                    # Try alternative download method
+                    try:
+                        nltk.download(package, quiet=True)
+                        logger.info(f"Successfully downloaded {package} using alternative method")
+                        
+                        # Special handling for wordnet after alternative download
+                        if package == 'wordnet':
+                            if not verify_wordnet():
+                                raise Exception("WordNet downloaded but not properly initialized")
+                                
+                    except Exception as e2:
+                        logger.error(f"Alternative download failed for {package}: {str(e2)}")
+                        st.error(f"Failed to download {package} using both methods. Please contact support.")
+        
+        # Final verification of all packages
+        for package, path in required_packages.items():
+            try:
+                if package == 'wordnet':
+                    if not verify_wordnet():
+                        raise Exception("WordNet not properly initialized")
+                else:
+                    nltk.data.find(path)
+            except Exception as e:
+                logger.error(f"Package {package} not found or not properly initialized: {str(e)}")
+                st.error(f"Critical error: Required NLTK package {package} is not available.")
+                sys.exit(1)
+                
+    except Exception as e:
+        logger.error(f"Critical error in NLTK data setup: {str(e)}")
+        st.error("Critical error in setting up NLTK data. Please contact support.")
+        sys.exit(1)
+
+# Call the ensure_nltk_data function at startup
+ensure_nltk_data()
 
 # Initialize session states
 if 'chat_history' not in st.session_state:
