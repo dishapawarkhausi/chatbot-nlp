@@ -1,35 +1,163 @@
-import streamlit as st
+from flask import Flask, render_template, request, jsonify
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from textblob import TextBlob
 import re
 import string
-import plotly.express as px
-import pandas as pd
-from datetime import datetime
-import speech_recognition as sr
-import pyttsx3
-import pyjokes
-import requests
-from bs4 import BeautifulSoup
-import os
-from dotenv import load_dotenv
-from typing import Dict, List, Optional
 import logging
-import webbrowser
-import sys
 import tempfile
+import os
+import webbrowser
+import json
+from datetime import datetime
+import random
+import requests
+from gtts import gTTS
+import base64
+import io
 
-# Initialize logger
-logging.basicConfig(level=logging.INFO)
+# Initialize Flask app
+app = Flask(__name__)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# Load environment variables
-load_dotenv()
+# Website categories and URLs
+WEBSITES = {
+    'search': {
+        'google': 'https://www.google.com',
+        'google maps': 'https://www.google.com/maps',
+        'google drive': 'https://drive.google.com',
+        'google docs': 'https://docs.google.com',
+        'google sheets': 'https://sheets.google.com',
+        'google slides': 'https://slides.google.com',
+        'google calendar': 'https://calendar.google.com',
+        'google photos': 'https://photos.google.com',
+        'google translate': 'https://translate.google.com',
+        'google meet': 'https://meet.google.com',
+        'google classroom': 'https://classroom.google.com',
+        'google news': 'https://news.google.com',
+        'google books': 'https://books.google.com',
+        'google scholar': 'https://scholar.google.com',
+        'google earth': 'https://earth.google.com',
+        'google flights': 'https://www.google.com/flights',
+        'google shopping': 'https://shopping.google.com',
+        'google finance': 'https://finance.google.com',
+        'google analytics': 'https://analytics.google.com',
+        'google ads': 'https://ads.google.com'
+    },
+    'social': {
+        'facebook': 'https://www.facebook.com',
+        'twitter': 'https://www.twitter.com',
+        'linkedin': 'https://www.linkedin.com',
+        'instagram': 'https://www.instagram.com',
+        'pinterest': 'https://www.pinterest.com',
+        'reddit': 'https://www.reddit.com',
+        'tiktok': 'https://www.tiktok.com',
+        'whatsapp': 'https://www.whatsapp.com',
+        'telegram': 'https://www.telegram.org',
+        'discord': 'https://www.discord.com'
+    },
+    'entertainment': {
+        'youtube': 'https://www.youtube.com',
+        'netflix': 'https://www.netflix.com',
+        'spotify': 'https://www.spotify.com',
+        'amazon prime': 'https://www.primevideo.com',
+        'disney plus': 'https://www.disneyplus.com',
+        'hulu': 'https://www.hulu.com',
+        'twitch': 'https://www.twitch.tv',
+        'soundcloud': 'https://www.soundcloud.com',
+        'apple music': 'https://music.apple.com',
+        'deezer': 'https://www.deezer.com'
+    },
+    'news': {
+        'bbc': 'https://www.bbc.com',
+        'cnn': 'https://www.cnn.com',
+        'reuters': 'https://www.reuters.com',
+        'the guardian': 'https://www.theguardian.com',
+        'new york times': 'https://www.nytimes.com',
+        'washington post': 'https://www.washingtonpost.com',
+        'al jazeera': 'https://www.aljazeera.com',
+        'bloomberg': 'https://www.bloomberg.com',
+        'forbes': 'https://www.forbes.com',
+        'techcrunch': 'https://techcrunch.com'
+    },
+    'education': {
+        'coursera': 'https://www.coursera.org',
+        'udemy': 'https://www.udemy.com',
+        'khan academy': 'https://www.khanacademy.org',
+        'edx': 'https://www.edx.org',
+        'duolingo': 'https://www.duolingo.com',
+        'wikipedia': 'https://www.wikipedia.org',
+        'github': 'https://www.github.com',
+        'stack overflow': 'https://stackoverflow.com',
+        'codecademy': 'https://www.codecademy.com'
+    },
+    'shopping': {
+        'amazon': 'https://www.amazon.com',
+        'ebay': 'https://www.ebay.com',
+        'walmart': 'https://www.walmart.com',
+        'etsy': 'https://www.etsy.com',
+        'aliexpress': 'https://www.aliexpress.com',
+        'best buy': 'https://www.bestbuy.com',
+        'target': 'https://www.target.com',
+        'newegg': 'https://www.newegg.com',
+        'wayfair': 'https://www.wayfair.com',
+        'shopify': 'https://www.shopify.com'
+    },
+    'travel': {
+        'booking': 'https://www.booking.com',
+        'airbnb': 'https://www.airbnb.com',
+        'expedia': 'https://www.expedia.com',
+        'tripadvisor': 'https://www.tripadvisor.com',
+        'kayak': 'https://www.kayak.com',
+        'skyscanner': 'https://www.skyscanner.com',
+        'hotels': 'https://www.hotels.com',
+        'hostelworld': 'https://www.hostelworld.com',
+        'vrbo': 'https://www.vrbo.com'
+    },
+    'food': {
+        'youtube cooking': 'https://www.youtube.com/results?search_query=cooking',
+        'allrecipes': 'https://www.allrecipes.com',
+        'food network': 'https://www.foodnetwork.com',
+        'epicurious': 'https://www.epicurious.com',
+        'bon appetit': 'https://www.bonappetit.com',
+        'serious eats': 'https://www.seriouseats.com',
+        'tasty': 'https://tasty.co',
+        'delish': 'https://www.delish.com',
+        'food52': 'https://food52.com',
+        'cooking light': 'https://www.cookinglight.com'
+    },
+    'sports': {
+        'espn': 'https://www.espn.com',
+        'nba': 'https://www.nba.com',
+        'nfl': 'https://www.nfl.com',
+        'mlb': 'https://www.mlb.com',
+        'nhl': 'https://www.nhl.com',
+        'fifa': 'https://www.fifa.com',
+        'nascar': 'https://www.nascar.com',
+        'olympics': 'https://www.olympics.com',
+        'sports illustrated': 'https://www.si.com',
+        'bleacher report': 'https://bleacherreport.com'
+    }
+}
+
+# Jokes database
+JOKES = [
+    "Why don't scientists trust atoms? Because they make up everything!",
+    "Why did the scarecrow win an award? Because he was outstanding in his field!",
+    "What do you call a fake noodle? An impasta!",
+    "How does a penguin build its house? Igloos it together!",
+    "Why don't eggs tell jokes? They'd crack each other up!"
+]
 
 def ensure_nltk_data():
-    """Ensure NLTK data is available in the correct location for production."""
+    """Ensure NLTK data is available in the correct location."""
     try:
         # Create a temporary directory for NLTK data if it doesn't exist
         nltk_data_dir = os.path.join(tempfile.gettempdir(), 'nltk_data')
@@ -46,137 +174,25 @@ def ensure_nltk_data():
             'averaged_perceptron_tagger': 'taggers/averaged_perceptron_tagger'
         }
         
-        def verify_wordnet():
-            """Verify WordNet is properly initialized."""
-            try:
-                from nltk.corpus import wordnet
-                # Try to access a known synset to verify WordNet is working
-                test_synset = wordnet.synsets('test')[0]
-                return True
-            except Exception as e:
-                logger.error(f"WordNet verification failed: {str(e)}")
-                return False
-        
         # Download each package if not present
         for package, path in required_packages.items():
             try:
-                # Special handling for wordnet
-                if package == 'wordnet':
-                    if verify_wordnet():
-                        logger.info("WordNet is already downloaded and initialized")
-                        continue
-                
-                # Check if package is already downloaded
                 nltk.data.find(path)
                 logger.info(f"Package {package} already downloaded")
             except LookupError:
                 try:
-                    # Download package to the temporary directory
                     nltk.download(package, download_dir=nltk_data_dir, quiet=True)
                     logger.info(f"Successfully downloaded NLTK package: {package}")
-                    
-                    # Special handling for wordnet after download
-                    if package == 'wordnet':
-                        if not verify_wordnet():
-                            raise Exception("WordNet downloaded but not properly initialized")
-                            
                 except Exception as e:
                     logger.error(f"Error downloading NLTK package {package}: {str(e)}")
-                    st.error(f"Error downloading required NLTK data: {package}. Please try again.")
-                    # Try alternative download method
-                    try:
-                        nltk.download(package, quiet=True)
-                        logger.info(f"Successfully downloaded {package} using alternative method")
-                        
-                        # Special handling for wordnet after alternative download
-                        if package == 'wordnet':
-                            if not verify_wordnet():
-                                raise Exception("WordNet downloaded but not properly initialized")
-                                
-                    except Exception as e2:
-                        logger.error(f"Alternative download failed for {package}: {str(e2)}")
-                        st.error(f"Failed to download {package} using both methods. Please contact support.")
-        
-        # Final verification of all packages
-        for package, path in required_packages.items():
-            try:
-                if package == 'wordnet':
-                    if not verify_wordnet():
-                        raise Exception("WordNet not properly initialized")
-                else:
-                    nltk.data.find(path)
-            except Exception as e:
-                logger.error(f"Package {package} not found or not properly initialized: {str(e)}")
-                st.error(f"Critical error: Required NLTK package {package} is not available.")
-                sys.exit(1)
-                
+                    return False
     except Exception as e:
         logger.error(f"Critical error in NLTK data setup: {str(e)}")
-        st.error("Critical error in setting up NLTK data. Please contact support.")
-        sys.exit(1)
+        return False
+    
+    return True
 
-# Call the ensure_nltk_data function at startup
-ensure_nltk_data()
-
-# Initialize session states
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
-if 'sentiment_history' not in st.session_state:
-    st.session_state.sentiment_history = []
-if 'intent_history' not in st.session_state:
-    st.session_state.intent_history = []
-if 'voice_enabled' not in st.session_state:
-    st.session_state.voice_enabled = False
-if 'is_listening' not in st.session_state:
-    st.session_state.is_listening = False
-if 'conversation_context' not in st.session_state:
-    st.session_state.conversation_context = []
-
-# Initialize text-to-speech engine
-def init_tts_engine():
-    engine = pyttsx3.init()
-    engine.setProperty('rate', 150)
-    engine.setProperty('volume', 0.9)
-    return engine
-
-def get_joke() -> str:
-    """Get a random joke."""
-    return pyjokes.get_joke()
-
-def speak_text(text: str) -> None:
-    """Convert text to speech using a new engine instance."""
-    if st.session_state.voice_enabled:
-        try:
-            engine = init_tts_engine()
-            engine.say(text)
-            engine.runAndWait()
-            engine.stop()
-        except Exception as e:
-            logger.error(f"Text-to-speech error: {str(e)}")
-            st.error(f"Error in text-to-speech: {str(e)}")
-
-def listen_to_speech() -> str:
-    """Listen to user's speech and convert to text."""
-    recognizer = sr.Recognizer()
-    with sr.Microphone() as source:
-        st.session_state.is_listening = True
-        try:
-            audio = recognizer.listen(source, timeout=5)
-            text = recognizer.recognize_google(audio)
-            st.session_state.is_listening = False
-            return text
-        except sr.WaitTimeoutError:
-            st.session_state.is_listening = False
-            return "No speech detected"
-        except sr.UnknownValueError:
-            st.session_state.is_listening = False
-            return "Could not understand audio"
-        except Exception as e:
-            logger.error(f"Speech recognition error: {str(e)}")
-            st.session_state.is_listening = False
-            return f"Error: {str(e)}"
-
-def preprocess_text(text: str) -> List[str]:
+def preprocess_text(text: str) -> list:
     """Enhanced text preprocessing."""
     text = text.lower()
     text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
@@ -201,72 +217,23 @@ def analyze_sentiment(text: str) -> tuple:
     
     return sentiment, polarity, subjectivity
 
-# Website dictionary with categories
-WEBSITES = {
-    'search': {
-        'google': 'https://www.google.com',
-        'bing': 'https://www.bing.com',
-        'duckduckgo': 'https://duckduckgo.com'
-    },
-    'social': {
-        'linkedin': 'https://www.linkedin.com',
-        'twitter': 'https://www.twitter.com',
-        'facebook': 'https://www.facebook.com',
-        'instagram': 'https://www.instagram.com'
-    },
-    'development': {
-        'github': 'https://www.github.com',
-        'stackoverflow': 'https://www.stackoverflow.com',
-        'medium': 'https://www.medium.com',
-        'dev.to': 'https://dev.to'
-    },
-    'entertainment': {
-        'youtube': 'https://www.youtube.com',
-        'netflix': 'https://www.netflix.com',
-        'spotify': 'https://www.spotify.com'
-    },
-    'shopping': {
-        'amazon': 'https://www.amazon.com',
-        'ebay': 'https://www.ebay.com'
-    },
-    'utilities': {
-        'gmail': 'https://mail.google.com',
-        'wikipedia': 'https://www.wikipedia.org',
-        'reddit': 'https://www.reddit.com'
-    }
-}
-
-def open_website(site_name: str) -> str:
-    """Open a website in the default browser."""
-    site_name = site_name.lower()
-    
-    # Search through all categories
-    for category, sites in WEBSITES.items():
-        if site_name in sites:
-            try:
-                webbrowser.open(sites[site_name])
-                return f"I've opened {site_name.capitalize()} for you."
-            except Exception as e:
-                logger.error(f"Error opening website: {str(e)}")
-                return f"I encountered an error while trying to open {site_name}."
-    
-    return f"I'm not sure how to open {site_name}. You can ask me to open any of these categories: search, social, development, entertainment, shopping, or utilities."
-
-def get_website_categories() -> str:
-    """Get a formatted string of website categories and their sites."""
-    categories = []
-    for category, sites in WEBSITES.items():
-        sites_list = ", ".join(sites.keys())
-        categories.append(f"{category.capitalize()}: {sites_list}")
-    return "\n".join(categories)
+def text_to_speech(text: str) -> str:
+    """Convert text to speech using gTTS and return base64 audio."""
+    try:
+        tts = gTTS(text=text, lang='en')
+        audio_buffer = io.BytesIO()
+        tts.write_to_fp(audio_buffer)
+        audio_buffer.seek(0)
+        audio_base64 = base64.b64encode(audio_buffer.read()).decode('utf-8')
+        return audio_base64
+    except Exception as e:
+        logger.error(f"Error in text-to-speech conversion: {str(e)}")
+        return None
 
 def get_response(user_input: str) -> tuple:
-    """Enhanced response generation with more patterns and context awareness."""
+    """Generate response based on user input."""
     tokens = preprocess_text(user_input)
     sentiment, polarity, subjectivity = analyze_sentiment(user_input)
-    
-    # Update conversation context
-    st.session_state.conversation_context.append({"role": "user", "content": user_input})
     
     # Define patterns and responses
     patterns = {
@@ -274,21 +241,17 @@ def get_response(user_input: str) -> tuple:
             'keywords': ['hello', 'hi', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening'],
             'response': "Hello! I'm your AI assistant. How can I help you today?"
         },
-        'nlp_question': {
-            'keywords': ['what', 'nlp', 'natural', 'language', 'processing'],
-            'response': "Natural Language Processing (NLP) is a branch of artificial intelligence that enables computers to understand, interpret, and generate human language. It combines computational linguistics, machine learning, and deep learning to process and analyze large amounts of natural language data."
-        },
         'capabilities': {
             'keywords': ['what', 'can', 'you', 'do', 'help', 'capabilities', 'features'],
             'response': """I can assist you with:
 - Natural Language Processing and AI discussions
 - Sentiment analysis of text
-- Programming jokes
 - Voice interaction
 - Contextual conversation
-- Data analysis and visualization
 - Professional assistance and guidance
-- Web browsing and navigation"""
+- Opening websites (just say 'open [website name]')
+- Telling jokes
+- Providing time and date information"""
         },
         'goodbye': {
             'keywords': ['bye', 'goodbye', 'see', 'later', 'exit', 'quit'],
@@ -298,219 +261,180 @@ def get_response(user_input: str) -> tuple:
             'keywords': ['thank', 'thanks', 'appreciate', 'grateful'],
             'response': "You're welcome! Is there anything else I can assist you with?"
         },
+        'joke': {
+            'keywords': ['joke', 'funny', 'humor', 'laugh'],
+            'response': random.choice(JOKES)
+        },
         'time': {
-            'keywords': ['time', 'current time', 'what time'],
-            'response': f"The current time is {datetime.now().strftime('%H:%M:%S')}"
+            'keywords': ['time', 'clock', 'hour'],
+            'response': f"The current time is {datetime.now().strftime('%I:%M %p')}"
         },
         'date': {
-            'keywords': ['date', 'today', 'what day'],
-            'response': f"Today is {datetime.now().strftime('%B %d, %Y')}"
+            'keywords': ['date', 'day', 'today'],
+            'response': f"Today is {datetime.now().strftime('%A, %B %d, %Y')}"
         },
-        'joke': {
-            'keywords': ['joke', 'funny', 'humor', 'laugh', 'tell me a joke'],
-            'response': get_joke
-        },
-        'website': {
-            'keywords': ['open', 'go to', 'visit', 'browse', 'website', 'site'] + 
-                       [site for category in WEBSITES.values() for site in category.keys()],
-            'response': lambda: open_website(next((site for category in WEBSITES.values() 
-                                                 for site in category.keys() 
-                                                 if site in tokens), 'google'))
-        },
-        'list_websites': {
-            'keywords': ['list', 'show', 'what', 'websites', 'sites', 'available'],
-            'response': lambda: f"I can help you access these websites:\n\n{get_website_categories()}"
+        'weather': {
+            'keywords': ['weather', 'temperature', 'forecast'],
+            'response': "I'm sorry, I don't have access to real-time weather data at the moment."
         }
     }
+    
+    # Check for website opening intent
+    website_intent = None
+    for word in tokens:
+        if word == 'open':
+            # Look for website name in the next word
+            website_index = tokens.index(word) + 1
+            if website_index < len(tokens):
+                website_name = tokens[website_index]
+                for category in WEBSITES.values():
+                    if website_name in category:
+                        website_intent = website_name
+                        break
     
     # Check for pattern matches
     matched_intent = None
     response = None
     
-    for intent, data in patterns.items():
-        if any(keyword in tokens for keyword in data['keywords']):
-            matched_intent = intent
-            if callable(data['response']):
-                response = data['response']()
-            else:
+    if website_intent:
+        matched_intent = 'website'
+        response = f"Opening {website_intent.capitalize()}..."
+        # Open the website
+        for category in WEBSITES.values():
+            if website_intent in category:
+                webbrowser.open(category[website_intent])
+                break
+    else:
+        for intent, data in patterns.items():
+            if any(keyword in tokens for keyword in data['keywords']):
+                matched_intent = intent
                 response = data['response']
-            break
+                break
     
     if not matched_intent:
+        # Try to find a website in the input
+        for category in WEBSITES.values():
+            for site_name in category.keys():
+                if site_name in user_input.lower():
+                    matched_intent = 'website'
+                    response = f"Opening {site_name.capitalize()}..."
+                    webbrowser.open(category[site_name])
+                    return response, matched_intent, sentiment, polarity, subjectivity
+        
+        # If no website found, give a general response
         response = "I understand you're asking about something. Could you please provide more context or rephrase your question?"
         matched_intent = "unknown"
     
-    # Update conversation context
-    st.session_state.conversation_context.append({"role": "assistant", "content": response})
-    
     return response, matched_intent, sentiment, polarity, subjectivity
 
-# Set up the Streamlit interface
-st.set_page_config(
-    page_title="ChatBot",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+@app.route('/')
+def home():
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Error rendering home page: {str(e)}")
+        return jsonify({'status': 'error', 'message': 'Error loading page'}), 500
 
-# Custom CSS
-st.markdown("""
-    <style>
-    .main {
-        background-color: #000000;
-    }
-    .stButton>button {
-        width: 100%;
-        border-radius: 5px;
-        height: 3em;
-        background-color: #1E1E1E;
-        color: white;
-        border: 1px solid #333;
-    }
-    .stButton>button:hover {
-        background-color: #2E2E2E;
-        border-color: #444;
-    }
-    .chat-message {
-        padding: 1.5rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-        display: flex;
-        flex-direction: column;
-    }
-    .chat-message.user {
-        background-color: #1E1E1E;
-        color: white;
-        border: 1px solid #333;
-    }
-    .chat-message.bot {
-        background-color: #2B2B2B;
-        color: white;
-        border: 1px solid #444;
-    }
-    .stTextInput>div>div>input {
-        background-color: #1E1E1E;
-        color: white;
-        border: 1px solid #333;
-    }
-    .stTextInput>div>div>input:focus {
-        border-color: #444;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# Title and description
-st.title("🤖 ChatBot")
-st.write("Welcome! I'm your professional chatbot, ready to help with your queries.")
-
-# Create three columns for the layout
-col1, col2, col3 = st.columns([2, 1, 1])
-
-with col1:
-    # Voice settings
-    voice_col1, voice_col2 = st.columns(2)
-    with voice_col1:
-        st.session_state.voice_enabled = st.checkbox("Enable Voice Output", value=False)
-    with voice_col2:
-        if st.button("🎤 Voice Input"):
-            with st.spinner("Listening..."):
-                voice_input = listen_to_speech()
-                if voice_input and voice_input != "No speech detected":
-                    st.session_state.user_input = voice_input
-    
-    # Chat interface
-    user_input = st.text_input("Type your message here...", key="user_input")
-    
-    # Clear chat history button
-    if st.button("🗑️ Clear Conversation"):
-        st.session_state.chat_history = []
-        st.session_state.sentiment_history = []
-        st.session_state.intent_history = []
-        st.session_state.conversation_context = []
-        st.experimental_rerun()
-    
-    # Process input when user submits
-    if user_input:
-        # Get bot response
-        response, intent, sentiment, polarity, subjectivity = get_response(user_input)
+@app.route('/process_text', methods=['POST'])
+def process_text():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No data provided'}), 400
+            
+        text = data.get('text', '')
+        if not text:
+            return jsonify({'status': 'error', 'message': 'No text provided'}), 400
         
-        # Speak the response if voice is enabled
-        speak_text(response)
+        # Get response
+        response, intent, sentiment, polarity, subjectivity = get_response(text)
         
-        # Update histories
-        st.session_state.chat_history.append({
-            "user": user_input,
-            "bot": response,
-            "timestamp": datetime.now().strftime("%H:%M:%S")
+        # Convert response to speech
+        audio_base64 = text_to_speech(response)
+        
+        return jsonify({
+            'status': 'success',
+            'text': text,
+            'response': response,
+            'intent': intent,
+            'sentiment': sentiment,
+            'polarity': polarity,
+            'subjectivity': subjectivity,
+            'timestamp': datetime.now().strftime('%I:%M:%S %p'),
+            'audio': audio_base64
         })
-        st.session_state.sentiment_history.append({
-            "text": user_input,
-            "sentiment": sentiment,
-            "polarity": polarity,
-            "subjectivity": subjectivity
+    except Exception as e:
+        logger.error(f"Error processing text: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/get_websites', methods=['GET'])
+def get_websites():
+    try:
+        return jsonify({
+            'status': 'success',
+            'websites': WEBSITES
         })
-        st.session_state.intent_history.append(intent)
-    
-    # Display chat history
-    st.subheader("Conversation History")
-    for message in st.session_state.chat_history:
-        st.markdown(f"""
-            <div class="chat-message user">
-                <div>👤 You ({message['timestamp']}): {message['user']}</div>
-            </div>
-            <div class="chat-message bot">
-                <div>🤖 Assistant: {message['bot']}</div>
-            </div>
-        """, unsafe_allow_html=True)
+    except Exception as e:
+        logger.error(f"Error getting websites: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
-with col2:
-    # Analytics
-    st.subheader("Analytics")
-    
-    if st.session_state.sentiment_history:
-        # Sentiment Analysis
-        st.write("### Sentiment Analysis")
-        latest_sentiment = st.session_state.sentiment_history[-1]
-        st.write(f"Latest Message Sentiment: {latest_sentiment['sentiment']}")
-        st.write(f"Polarity: {latest_sentiment['polarity']:.2f}")
-        st.write(f"Subjectivity: {latest_sentiment['subjectivity']:.2f}")
+@app.route('/open_website', methods=['POST'])
+def open_website():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No data provided'}), 400
+            
+        site_name = data.get('site_name', '').lower()
+        if not site_name:
+            return jsonify({'status': 'error', 'message': 'No site name provided'}), 400
         
-        # Sentiment Trend
-        if len(st.session_state.sentiment_history) > 1:
-            st.write("### Sentiment Trend")
-            sentiment_df = pd.DataFrame(st.session_state.sentiment_history)
-            fig = px.line(sentiment_df, y='polarity', title='Sentiment Polarity Over Time')
-            st.plotly_chart(fig, use_container_width=True)
+        # Find the website URL
+        for category in WEBSITES.values():
+            if site_name in category:
+                url = category[site_name]
+                webbrowser.open(url)
+                return jsonify({
+                    'status': 'success',
+                    'message': f"Opening {site_name.capitalize()}..."
+                })
+        
+        return jsonify({
+            'status': 'error',
+            'message': f"Website {site_name} not found"
+        }), 404
+    except Exception as e:
+        logger.error(f"Error opening website: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
-with col3:
-    # Quick Actions
-    st.subheader("Quick Actions")
-    
-    # Jokes
-    if st.button("😄 Joke"):
-        joke = get_joke()
-        st.write(joke)
-        if st.session_state.voice_enabled:
-            speak_text(joke)
-    
-    # Website Categories
-    st.subheader("Available Websites")
-    for category, sites in WEBSITES.items():
-        with st.expander(f"📂 {category.capitalize()}"):
-            for site_name in sites.keys():
-                if st.button(f"🌐 {site_name.capitalize()}", key=f"btn_{site_name}"):
-                    result = open_website(site_name)
-                    st.write(result)
-                    if st.session_state.voice_enabled:
-                        speak_text(result)
-    
-    # Intent Distribution
-    if st.session_state.intent_history:
-        st.subheader("Intent Distribution")
-        intent_counts = pd.Series(st.session_state.intent_history).value_counts()
-        fig = px.pie(values=intent_counts.values, names=intent_counts.index, title='Intent Distribution')
-        st.plotly_chart(fig, use_container_width=True)
+@app.route('/get_joke', methods=['GET'])
+def get_joke():
+    try:
+        joke = random.choice(JOKES)
+        audio_base64 = text_to_speech(joke)
+        return jsonify({
+            'status': 'success',
+            'joke': joke,
+            'audio': audio_base64
+        })
+    except Exception as e:
+        logger.error(f"Error getting joke: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
-# Footer
-st.markdown("---")
-st.markdown("ChatBot | Powered by Advanced NLP") 
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'status': 'error', 'message': 'Resource not found'}), 404
+
+@app.errorhandler(500)
+def server_error(error):
+    return jsonify({'status': 'error', 'message': 'Internal server error'}), 500
+
+if __name__ == '__main__':
+    # Ensure NLTK data is available
+    if ensure_nltk_data():
+        # Get port from environment variable or use default
+        port = int(os.environ.get('PORT', 5000))
+        # Run the app
+        app.run(host='0.0.0.0', port=port)
+    else:
+        logger.error("Failed to initialize NLTK data. Application cannot start.") 
