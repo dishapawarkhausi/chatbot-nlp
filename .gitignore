@@ -1,1 +1,5 @@
+# Ignore virtual environment
 .venv/
+
+# Ignore nltk downloaded data
+nltk_data/
