@@ -168,20 +168,16 @@ What would you like to know?"""
         logger.error(f"Error in get_response: {str(e)}")
         return "I apologize, but I encountered an error processing your request. Please try again.", "error", "neutral", 0, 0
 
+import nltk
+from nltk.corpus import stopwords
+import logging
+
+logger = logging.getLogger(__name__)
+
 def ensure_nltk_data():
-    """Ensure NLTK data is available in the correct location."""
     try:
-        logger.info("Starting NLTK data initialization...")
-        
-        # Create a directory for NLTK data in the application directory
-        nltk_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nltk_data')
-        os.makedirs(nltk_data_dir, exist_ok=True)
-        logger.info(f"NLTK data directory: {nltk_data_dir}")
-        
-        # Set NLTK data path
-        nltk.data.path.append(nltk_data_dir)
-        
-        # Required NLTK packages
+        nltk_data_dir = "./nltk_data"  # optional local path, or leave it default
+
         required_packages = [
             'punkt',
             'stopwords',
@@ -189,56 +185,34 @@ def ensure_nltk_data():
             'wordnet'
         ]
         
-        # Download each package
         for package in required_packages:
             try:
                 logger.info(f"Checking package: {package}")
-                nltk.download(package, download_dir=nltk_data_dir, quiet=True)
+                nltk.download(package, quiet=True)
                 logger.info(f"Successfully downloaded {package}")
             except Exception as e:
                 logger.error(f"Error downloading {package}: {str(e)}")
                 return False
-        
-        # Verify the downloads
+
+        # Verification — FIXED here
         try:
-            # Test punkt
-            nltk.word_tokenize("Test sentence")
-            logger.info("Punkt tokenizer verified")
-            
-            # Test stopwords
-            stopwords.words('english')
-            logger.info("Stopwords verified")
-            
-            # Test tagger
-            nltk.pos_tag(['test'])
-            logger.info("POS tagger verified")
-            
-            # Test wordnet
+            _ = nltk.word_tokenize("Test sentence")  # requires punkt
+            _ = stopwords.words('english')          # stopwords
+            _ = nltk.pos_tag(['test'])              # averaged_perceptron_tagger
             from nltk.corpus import wordnet
-            wordnet.synsets('test')
-            logger.info("WordNet verified")
-            
+            _ = wordnet.synsets('test')             # wordnet
+
             logger.info("All NLTK packages verified successfully")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error verifying NLTK packages: {str(e)}")
             return False
-            
+
     except Exception as e:
         logger.error(f"Critical error in NLTK data setup: {str(e)}")
         return False
 
-# Initialize NLTK data at startup
-try:
-    logger.info("Initializing NLTK data...")
-    if not ensure_nltk_data():
-        logger.error("Failed to initialize NLTK data")
-        raise RuntimeError("Failed to initialize NLTK data")
-    logger.info("NLTK data initialized successfully")
-except Exception as e:
-    logger.error(f"Error during NLTK initialization: {str(e)}")
-    raise
 
 # Website categories and URLs
 WEBSITES = {
