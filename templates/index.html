@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -267,12 +268,21 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .clear-btn {
@@ -312,16 +322,25 @@
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 AI ChatBot</h1>
+            <h1>🤖 ChatBot</h1>
             <p>I am your personal assistant. Ask me anything!</p>
         </div>
 
@@ -396,9 +415,9 @@
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
             const time = timestamp || new Date().toLocaleTimeString();
-            
+
             let messageContent = `${isUser ? '👤 You' : '🤖 Assistant'} (${time}): ${text}`;
-            
+
             if (audioBase64 && !isUser) {
                 messageContent += `
                     <div class="audio-controls">
@@ -413,24 +432,46 @@
             if (isVoiceCommand) {
                 messageContent = `<span style="color: var(--accent-color);">🎤 Voice Command:</span> ${messageContent}`;
             }
-            
+
             messageDiv.innerHTML = messageContent;
             chatContainer.appendChild(messageDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Debug log
+            console.log(`Added ${isUser ? 'user' : 'bot'} message:`, {
+                text,
+                timestamp: time,
+                hasAudio: !!audioBase64,
+                isVoiceCommand
+            });
         }
 
         function updateSentimentInfo(data) {
+            if (!data || !data.sentiment) {
+                console.warn('No sentiment data available:', data);
+                return;
+            }
+
+            console.log('Updating sentiment info:', data); // Debug log
+
             document.getElementById('sentiment').textContent = data.sentiment;
-            document.getElementById('polarity').textContent = data.polarity.toFixed(2);
-            document.getElementById('subjectivity').textContent = data.subjectivity.toFixed(2);
+            document.getElementById('polarity').textContent = data.polarity ? data.polarity.toFixed(2) : 'N/A';
+            document.getElementById('subjectivity').textContent = data.subjectivity ? data.subjectivity.toFixed(2) : 'N/A';
             sentimentInfo.style.display = 'block';
         }
 
         function updateIntentDistribution(intent) {
+            if (!intent) {
+                console.warn('No intent data available:', intent);
+                return;
+            }
+
+            console.log('Updating intent distribution:', intent); // Debug log
+
             intentHistory.push(intent);
             const intentCounts = {};
             intentHistory.forEach(i => intentCounts[i] = (intentCounts[i] || 0) + 1);
-            
+
             const intentDiv = document.getElementById('intentChart');
             intentDiv.innerHTML = '';
             for (const [intent, count] of Object.entries(intentCounts)) {
@@ -481,7 +522,7 @@
                     body: JSON.stringify({ site_name: siteName })
                 });
                 const data = await response.json();
-                
+
                 if (data.status === 'success') {
                     addMessage(data.message, false, null, null, isVoiceCommand);
                 } else {
@@ -498,11 +539,76 @@
             }
         }
 
+        // Define patterns and responses
+        const patterns = {
+            name: {
+                phrases: ['what is your name', 'who are you', 'what should i call you', 'what are you'],
+                response: "I'm your AI assistant, designed to help you with various tasks and provide companionship. You can call me AI Assistant."
+            },
+            age: {
+                phrases: ['how old are you', 'what is your age', 'when were you born', 'how old'],
+                response: "I'm an AI, so I don't have an age in the traditional sense. I'm constantly learning and evolving to better assist you!"
+            },
+            location: {
+                phrases: ['where are you', 'where do you live', 'where are you from', 'your location'],
+                response: "I exist in the digital realm, ready to assist you from anywhere in the world! I'm accessible through this interface whenever you need me."
+            },
+            capabilities: {
+                phrases: ['what can you do', 'what are your capabilities', 'what are you capable of', 'what do you do'],
+                response: "I can help you with many things:\n1. Opening websites and navigating the internet\n2. Telling jokes and providing entertainment\n3. Providing time and date information\n4. Having natural conversations\n5. Understanding and responding to your questions\n6. Providing information and assistance\n7. Analyzing sentiment and context\n8. Offering companionship and support\nWhat would you like to know more about?"
+            },
+            mood: {
+                phrases: ['how are you', 'how do you feel', 'are you ok', 'how\'s it going'],
+                response: "I'm functioning well and ready to assist you! I'm here to help and make your experience as pleasant as possible. How are you doing today?"
+            },
+            learning: {
+                phrases: ['do you learn', 'can you learn', 'how do you learn', 'are you learning'],
+                response: "Yes, I'm constantly learning and improving through our interactions and updates. Every conversation helps me become better at understanding and assisting you!"
+            },
+            emotions: {
+                phrases: ['do you feel', 'can you feel', 'do you have emotions', 'are you happy'],
+                response: "I can understand and respond to emotions, but I don't experience them in the same way humans do. I'm here to be empathetic and supportive, helping you navigate your feelings and experiences."
+            },
+            purpose: {
+                phrases: ['why were you created', 'what is your purpose', 'why do you exist', 'what\'s your purpose'],
+                response: "I was created to assist and interact with humans, providing help, information, and companionship through natural conversation. I can help you with various tasks, answer questions, and make your digital experience more engaging."
+            }
+        };
+
+        // Function to check for pattern matches
+        function checkPatterns(text) {
+            const cleanedText = text.toLowerCase().trim().replace(/[?.!]/g, '');
+            
+            for (const [intent, data] of Object.entries(patterns)) {
+                if (data.phrases.some(phrase => cleanedText.includes(phrase))) {
+                    return {
+                        intent: intent,
+                        response: data.response
+                    };
+                }
+            }
+            
+            return null;
+        }
+
+        // Update the sendMessage function
         async function sendMessage(text) {
             if (!text.trim()) return;
             
+            // Add user message immediately
+            addMessage(text, true, new Date().toLocaleTimeString());
+            
             loading.style.display = 'block';
             try {
+                // First check for pattern matches
+                const patternMatch = checkPatterns(text);
+                if (patternMatch) {
+                    addMessage(patternMatch.response, false, new Date().toLocaleTimeString());
+                    updateIntentDistribution(patternMatch.intent);
+                    return;
+                }
+                
+                // If no pattern match, send to backend
                 const response = await fetch('/process_text', {
                     method: 'POST',
                     headers: {
@@ -510,26 +616,47 @@
                     },
                     body: JSON.stringify({ text })
                 });
-                const data = await response.json();
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
                 if (data.status === 'success') {
-                    addMessage(data.text, true, data.timestamp);
+                    // Add bot response
                     addMessage(data.response, false, data.timestamp, data.audio);
-                    updateSentimentInfo(data);
-                    updateIntentDistribution(data.intent);
+                    
+                    // Update analytics
+                    if (data.sentiment) {
+                        updateSentimentInfo({
+                            sentiment: data.sentiment,
+                            polarity: data.polarity,
+                            subjectivity: data.subjectivity
+                        });
+                    }
+                    if (data.intent) {
+                        updateIntentDistribution(data.intent);
+                    }
+                    
+                    // Update chat history
                     chatHistory.push({
-                        user: data.text,
+                        user: text,
                         bot: data.response,
-                        timestamp: data.timestamp
+                        timestamp: data.timestamp,
+                        intent: data.intent,
+                        sentiment: data.sentiment
                     });
                 } else {
-                    addMessage(`Error: ${data.message}`);
+                    addMessage(`Error: ${data.message || 'Something went wrong'}`, false);
                 }
             } catch (error) {
-                addMessage(`Error: ${error.message}`);
+                console.error('Error sending message:', error);
+                addMessage(`Error: ${error.message || 'Failed to send message'}`, false);
             } finally {
                 loading.style.display = 'none';
                 textInput.value = '';
+                textInput.focus();
             }
         }
 
@@ -557,7 +684,7 @@
                 recognition.onresult = (event) => {
                     const text = event.results[0][0].transcript;
                     textInput.value = text;
-                    
+
                     // Check if it's a website opening command
                     const lowerText = text.toLowerCase();
                     if (lowerText.includes('open')) {
@@ -652,4 +779,5 @@
         loadWebsites();
     </script>
 </body>
-</html> 
+
+</html>

@@ -5,3 +5,11 @@ gtts
 requests
 gunicorn
 python-dotenv
+Werkzeug
+clic
+itsdangerous
+Jinja2
+MarkupSafe
+numpy
+regex
+tqdm
