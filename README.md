@@ -151,6 +151,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Flask for the web framework
 - Render for hosting
 
-## 📞 Support
+## 🔗 Live App
 
-For support, please open an issue in the repository or contact the maintainers.
+You can try the app live here: [Open chatbot web app](https://chatbot-96a2.onrender.com)
