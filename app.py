@@ -18,7 +18,10 @@ import base64
 import io
 
 # Initialize Flask app
-app = Flask(__name__)
+app = Flask(__name__, 
+    template_folder='templates',
+    static_folder='static'
+)
 
 # Configure logging
 logging.basicConfig(
@@ -134,8 +137,8 @@ def get_response(user_input: str) -> tuple:
             for category in WEBSITES.values():
                 for site_name, url in category.items():
                     if site_name in user_input_lower:
-                        webbrowser.open(url)
-                        return f"Opening {site_name.capitalize()}...", 'website', sentiment, polarity, subjectivity
+                        # Return a clickable link instead of opening the browser
+                        return f'Click here to open {site_name.capitalize()}: <a href="{url}" target="_blank">{url}</a>', 'website', sentiment, polarity, subjectivity
         
         # Check for joke request
         if any(phrase in user_input_lower for phrase in ['tell me a joke', 'make me laugh', 'got any jokes', 'say something funny']):
@@ -395,10 +398,14 @@ def text_to_speech(text: str) -> str:
 @app.route('/')
 def home():
     try:
+        logger.info("Attempting to render home page")
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Error rendering home page: {str(e)}")
-        return jsonify({'status': 'error', 'message': 'Error loading page'}), 500
+        return jsonify({
+            'status': 'error',
+            'message': f'Error loading page: {str(e)}'
+        }), 500
 
 @app.route('/process_text', methods=['POST'])
 def process_text():
