@@ -44,8 +44,8 @@ A modern AI chatbot with voice input/output capabilities, sentiment analysis, an
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/dishapawarkhausi/ChatBot
-cd ChatBot
+git clone https://github.com/dishapawarkhausi/chatbot-nlp
+cd chatbot-nlp
 ```
 
 2. Create a virtual environment:
